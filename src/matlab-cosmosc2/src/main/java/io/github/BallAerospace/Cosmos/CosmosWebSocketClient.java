@@ -1,4 +1,4 @@
-package io.github.BallAerospace.MatlabCosmos;
+package io.github.BallAerospace.Cosmos;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -9,9 +9,9 @@ import java.util.Map;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
-public class MatlabWebSocketClient extends WebSocketClient {
+public class CosmosWebSocketClient extends WebSocketClient {
     // This open a websocket connection as specified by RFC6455
-    public MatlabWebSocketClient( URI serverURI, Map<String,String> httpHeaders ) {
+    public CosmosWebSocketClient( URI serverURI, Map<String,String> httpHeaders ) {
         super( serverURI, httpHeaders );
     }
 
@@ -19,8 +19,8 @@ public class MatlabWebSocketClient extends WebSocketClient {
     @Override
     public void onOpen( ServerHandshake handshakedata ) {
         String openMessage = "Connected to server at " + getURI();
-        MatlabEvent matlab_event = new MatlabEvent( this, openMessage );
-        for (MatlabListener _listener : _listeners) {
+        CosmosWebSocketEvent matlab_event = new CosmosWebSocketEvent( this, openMessage );
+        for (CosmosWebSocketListener _listener : _listeners) {
             (_listener).Open(matlab_event);
         }
     }
@@ -28,8 +28,8 @@ public class MatlabWebSocketClient extends WebSocketClient {
     // This function gets executed on text message receipt
     @Override
     public void onMessage( String message ) {
-        MatlabEvent matlab_event = new MatlabEvent( this, message );
-        for (MatlabListener _listener : _listeners) {
+        CosmosWebSocketEvent matlab_event = new CosmosWebSocketEvent( this, message );
+        for (CosmosWebSocketListener _listener : _listeners) {
             (_listener).TextMessage(matlab_event);
         }
     }
@@ -37,8 +37,8 @@ public class MatlabWebSocketClient extends WebSocketClient {
     // Method handler when a byte message has been received by the client
     @Override
     public void onMessage( ByteBuffer blob ) {
-        MatlabEvent matlab_event = new MatlabEvent( this, blob );
-        for (MatlabListener _listener : _listeners) {
+        CosmosWebSocketEvent matlab_event = new CosmosWebSocketEvent( this, blob );
+        for (CosmosWebSocketListener _listener : _listeners) {
             (_listener).BinaryMessage(matlab_event);
         }
     }
@@ -46,8 +46,8 @@ public class MatlabWebSocketClient extends WebSocketClient {
     // This method gets executed on error
     @Override
     public void onError( Exception ex ) {
-        MatlabEvent matlab_event = new MatlabEvent( this, ex.getMessage() );
-        for (MatlabListener _listener : _listeners) {
+        CosmosWebSocketEvent matlab_event = new CosmosWebSocketEvent( this, ex.getMessage() );
+        for (CosmosWebSocketListener _listener : _listeners) {
             (_listener).Error(matlab_event);
         }
         // If the error is fatal, onClose will be called automatically
@@ -58,18 +58,18 @@ public class MatlabWebSocketClient extends WebSocketClient {
     @Override
     public void onClose( int code, String reason, boolean remote ) {
         String closeMessage = "Disconnected from server at " + getURI();
-        MatlabEvent matlab_event = new MatlabEvent( this, closeMessage );
-        for (MatlabListener _listener : _listeners) {
+        CosmosWebSocketEvent matlab_event = new CosmosWebSocketEvent( this, closeMessage );
+        for (CosmosWebSocketListener _listener : _listeners) {
             (_listener).Close(matlab_event);
         }
     }
 
     // Methods for handling MATLAB as a listener, automatically managed.
-    private final List<MatlabListener> _listeners = new ArrayList<MatlabListener>();
-    public synchronized void addMatlabListener( MatlabListener lis ) {
+    private final List<CosmosWebSocketListener> _listeners = new ArrayList<CosmosWebSocketListener>();
+    public synchronized void addMatlabListener( CosmosWebSocketListener lis ) {
         _listeners.add( lis );
     }
-    public synchronized void removeMatlabListener( MatlabListener lis ) {
+    public synchronized void removeMatlabListener( CosmosWebSocketListener lis ) {
         _listeners.remove( lis );
     }
 }

@@ -51,8 +51,8 @@ See the `CosmosClient.m` files in the `examples` folder for an implementation ex
 Example
 ------------
 
+Connecting to Cosmos v5 with the CosmosClient:
 
-COnnecting to cosmos with the CosmosClient:
 ```matlab
 client = CosmosClient('ws://localhost:2900/cosmos-api/cable');
 ```

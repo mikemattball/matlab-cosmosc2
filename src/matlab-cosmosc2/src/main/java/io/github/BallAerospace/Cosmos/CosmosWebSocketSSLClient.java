@@ -1,4 +1,4 @@
-package io.github.BallAerospace.MatlabCosmos;
+package io.github.BallAerospace.Cosmos;
 
 import java.net.URI;
 import java.io.File;
@@ -13,10 +13,10 @@ import javax.net.ssl.TrustManagerFactory;
 
 import org.java_websocket.WebSocketImpl;
 
-public class MatlabWebSocketSSLClient extends MatlabWebSocketClient {
+public class CosmosWebSocketSSLClient extends CosmosWebSocketClient {
     // The constructor creates a new SSL WebSocketServer with the wildcard IP,
     // accepting all connections on the specified port
-    public MatlabWebSocketSSLClient( URI serverURI, Map<String,String> httpHeaders, String keystore, String storePassword, String keyPassword ) throws Exception {
+    public CosmosWebSocketSSLClient( URI serverURI, Map<String,String> httpHeaders, String keystore, String storePassword, String keyPassword ) throws Exception {
         super( serverURI, httpHeaders );
         String STORETYPE = "JKS";
         //WebSocketImpl.DEBUG = true;
@@ -39,7 +39,7 @@ public class MatlabWebSocketSSLClient extends MatlabWebSocketClient {
         this.setSocket( factory.createSocket() );
     }
 
-    public MatlabWebSocketSSLClient( URI serverURI, Map<String,String> httpHeaders ) throws Exception {
+    public CosmosWebSocketSSLClient( URI serverURI, Map<String,String> httpHeaders ) throws Exception {
         super( serverURI, httpHeaders );
         //WebSocketImpl.DEBUG = true;
 

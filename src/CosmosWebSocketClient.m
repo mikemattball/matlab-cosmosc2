@@ -1,7 +1,7 @@
-classdef WebSocketClient < handle
-    %WEBSOCKETCLIENT WebSocketClient is an ABSTRACT class that allows
-    %MATLAB to start a java-websocket client instance and connect to a
-    %WebSocket server.
+classdef CosmosWebSocketClient < handle
+    %COSMOSWEBSOCKETCLIENT CosmosWebSocketClient is an ABSTRACT class that 
+    %allows MATLAB to start a java-websocket client instance and connect
+    %to the Cosmos v5 WebSocket server.
     %
     %   In order to make a valid implementation of the class, some methods
     %   must be defined in the superclass:
@@ -14,14 +14,14 @@ classdef WebSocketClient < handle
     %   the client needs to perform actions that are not responses to a
     %   server-caused event, these actions must be performed outside of the
     %   callback methods.
-
+    
     properties (SetAccess = private)
         URI % The URI of the server
         Secure = false % True if the connection is using WebSocketSecure
         Status = false % Status of the connection, true if the connection is open
         ClientObj % Java-WebSocket client object
     end
-
+    
     properties (Access = private)
         HttpHeaders = {} % Cell array of additional headers {'key1', 'value1',...}
         UseKeyStore = false
@@ -29,10 +29,10 @@ classdef WebSocketClient < handle
         StorePassword % Keystore password
         KeyPassword % Key password
     end
-
+    
     methods
-        function obj = WebSocketClient(URI,varargin)
-            % WebSocketClient Constructor
+        function obj = CosmosWebSocketClient(URI,varargin)
+            % CosmosWebSocketClient Constructor
             % Creates a java client to connect to the designated server.
             % Arguments: URI, [keyStore, storePassword, keyPassword], [httpHeaders]
             % The URI must be of the form 'ws[s]://some.server.org:30000'.
@@ -66,7 +66,7 @@ classdef WebSocketClient < handle
             % Connect the client to the server
             obj.open();
         end
-
+        
         function status = get.Status(obj)
             % Get the status of the connection
             if isempty(obj.ClientObj)
@@ -75,7 +75,7 @@ classdef WebSocketClient < handle
                 status = obj.ClientObj.isOpen();
             end
         end
-
+        
         function open(obj)
             % Open the connection to the server
             % Create the java client object in with specified URI
@@ -87,12 +87,12 @@ classdef WebSocketClient < handle
                 headers.put(obj.HttpHeaders{i}, obj.HttpHeaders{i+1});
             end
             if obj.Secure && ~obj.UseKeyStore
-                obj.ClientObj = handle(MatlabWebSocketSSLClient(uri, headers),'CallbackProperties');
+                obj.ClientObj = handle(CosmosWebSocketSSLClient(uri, headers),'CallbackProperties');
             elseif obj.Secure && obj.UseKeyStore
-                obj.ClientObj = handle(MatlabWebSocketSSLClient(uri, headers,...
+                obj.ClientObj = handle(CosmosWebSocketSSLClient(uri, headers,...
                     obj.KeyStore,obj.StorePassword,obj.KeyPassword),'CallbackProperties');
             else
-                obj.ClientObj = handle(MatlabWebSocketClient(uri, headers),'CallbackProperties');
+                obj.ClientObj = handle(CosmosCosmosWebSocketClient(uri, headers),'CallbackProperties');
             end
             % Set callbacks
             set(obj.ClientObj,'OpenCallback',@obj.openCallback);

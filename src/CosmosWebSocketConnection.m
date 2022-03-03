@@ -1,5 +1,5 @@
-classdef WebSocketConnection < handle
-    %WEBSOCKETCONNECTION WebSocketConnection represents a WebSocket
+classdef CosmosWebSocketConnection < handle
+    %WEBSOCKETCONNECTION CosmosWebSocketConnection represents a WebSocket
     %connection to a single client, from the point of view of the server.
     %Use it to send messages to that client.
     %
@@ -20,7 +20,7 @@ classdef WebSocketConnection < handle
     end
     
     methods (Access = ?WebSocketServer)
-        function obj = WebSocketConnection(conn)
+        function obj = CosmosWebSocketConnection(conn)
             % Instantiate a connection object from the java object, this
             % method can only be used by a WebSocketServer
             obj.WebSocketObj = handle(conn);
