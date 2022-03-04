@@ -8,14 +8,14 @@ classdef CosmosWebSocket < CosmosWebSocketClient
     methods
         function obj = CosmosWebSocket(varargin)
             %Constructor
-            obj@WebSocketClient(varargin{:});
+            obj@CosmosWebSocketClient(varargin{:});
         end     
 
-        function onTextMessage(obj, message)
+        function message = onTextMessage(obj, message)
             % This function simply displays the message received
             fprintf('Message received: %d\n',length(message));
-            % struct message_struct = jsondecode(message);
-            % jsondecode(m_struct.message);
+            struct message_struct = jsondecode(message);
+            message = message_struct;
         end
 
         function onBinaryMessage(obj, bytearray)
