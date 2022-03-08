@@ -1,10 +1,19 @@
-Matlab-Cosmosc2
+Matlab-CosmosC2
 ===============
 
-is a simple library consisting of a client for MATLAB built on [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket), a java implementation of the websocket protocol. Encryption is supported with self-signed certificates made with the java keytool.
+WebApi
+---
+
+CosmosJsonApi and CosmosJsonRpcApi are both interfaces that make it easier to get data from Cosmos v5 to Matlab. 
+
+
+WebSockets
+---
+
+matlab-cosmosc2 is a simple library consisting of a client for MATLAB built on [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket), a java implementation of the websocket protocol. Encryption is supported with self-signed certificates made with the java keytool.
 
 Installation and Uninstallation
-------------
+---
 
 *IMPORTANT*: you must make sure to install the java library to the static class path by following the instructions below. matlab-cosmosc2 will not work otherwise!
 
@@ -27,11 +36,11 @@ Simply undo these operations to uninstall MatlabWebSocket.
 See the [MATLAB  Documentation](http://www.mathworks.com/help/matlab/matlab_external/static-path.html) for more information on the static java class path.
 
 Usage
-------------
+---
 
 To implement a WebSocket server or client, a subclass of either `WebSocketServer` or `WebSocketClient` must be defined. For more details (see the [object-oriented programming documentation of MATLAB](http://www.mathworks.com/help/matlab/object-oriented-programming.html)).
 
-The `WebSocketServer.m` file is an abstract MATLAB class. The behavior of the server must therefore be defined by creating a subclass that implements the following methods:
+The `CosmosWebSocketClient.m` file is an abstract MATLAB class. The behavior of the server must therefore be defined by creating a subclass that implements the following methods:
 
 ```matlab
 onOpen(obj,conn,message)
@@ -46,31 +55,38 @@ onClose(obj,conn,message)
 
 These methods will be automatically called when the corresponding event (connection is opened, message received, etc...) occurs. In this way, a reactive behavior can be defined.
 
-See the `CosmosClient.m` files in the `examples` folder for an implementation example. A good resource on classes is the [MATLAB object-oriented documentation](http://www.mathworks.com/help/matlab/object-oriented-programming.html).
+See the `test.m` files in the `examples` folder for an implementation example. A good resource on classes is the [MATLAB object-oriented documentation](http://www.mathworks.com/help/matlab/object-oriented-programming.html).
 
 Example
-------------
+---
 
 Connecting to Cosmos v5 with the CosmosClient:
 
 ```matlab
-client = CosmosClient('ws://localhost:2900/cosmos-api/cable');
+SCHEMA = 'wss';
+HOST = 'localhost';
+PORT = 2900;
+ENDPOINT = '/cosmos-api/cable';
+client = CosmosWebSocket(SCHEMA,HOST,PORT,ENDPOINT);
 ```
 
 
 SSL / WebSocket Secure (wss)
-------------
+---
 
 To enable SSL, you must first have a certificate. A self-signed key store can be generated with the java `keytool`, but you should always use a valid certificate in production. From there, open the server by passing the location of the store, the store password, and the key password. With the EchoServer, for example:
 
 The client can then connect to it:
 ```matlab
-URI = 'wss://localhost:2900/cosmos-api/cable';
-c = CosmosClient(URI, STORE, STOREPASSWORD, KEYPASSWORD);
+SCHEMA = 'wss';
+HOST = 'localhost';
+PORT = 2900;
+ENDPOINT = '/cosmos-api/cable';
+c = CosmosWebSocket(SCHEMA,HOST,PORT,ENDPOINT,STORE,STOREPASSWORD,KEYPASSWORD);
 ```
 
 Building the Java JAR
-------------
+---
 
 To build the `jar` file yourself, it is recommended to use Apache Maven. Maven will automatically take care of downloading Java-WebSocket and neatly package everything into a single file (an "uber jar"). 
 
@@ -86,7 +102,7 @@ If you are running on a network behind a firewall intercepting SSL certificates 
 Once the `mvn` command is on your path, simply `cd` to the `matlab-cosmosc2` folder and execute `mvn package`.
 
 Acknowledgments
-------------
+---
 
 This work was based on a MATLAB websocket implementation:  [MatlabWebSockets](https://github.com/jebej/MatlabWebSocket).
 
@@ -95,6 +111,6 @@ This work was inspired by a websocket client MATLAB implementation:  [matlab-web
 It relies on the [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket) library.
 
 License
-------------
+---
 
 The code in this repository is licensed under the MIT license. See the `LICENSE` file for details.

@@ -14,9 +14,11 @@ classdef CosmosJsonApi < CosmosApiClient
             % -------------------------------------------------------------
             %
             % Inputs:
-            %   URI   - The URI must be of the form 'http[s]://localhost:2900'.
-            %   AUTH  - Cosmos Authorization
-            %   SCOPE - The Cosmos Scope defaults to 'DEFAULT'
+            %   SCHEMA - (String) The SCHEMA must be of the form 'http[s]'.
+            %   HOST   - (String) The HOST must be String 'localhost'.
+            %   PORT   - (Number) The PORT must be positive number: 2900.
+            %   AUTH   - (String) Cosmos Authorization
+            %   SCOPE  - (String) The Cosmos Scope defaults to 'DEFAULT'
 
             obj@CosmosApiClient(varargin{:});
         end

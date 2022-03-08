@@ -19,11 +19,11 @@ classdef CosmosApiClient < handle
             % -------------------------------------------------------------
             %
             % Inputs:
-            %   SCHEMA - The URI must be of the form 'http[s]'.
-            %   HOST   - The URI must be of the form 'localhost'.
-            %   PORT   - The URI must be of the form '2900'.
-            %   AUTH   - Cosmos Authorization
-            %   SCOPE  - The Cosmos Scope defaults to 'DEFAULT'
+            %   SCHEMA - (String) The SCHEMA must be of the form 'http[s]'.
+            %   HOST   - (String) The HOST must be String 'localhost'.
+            %   PORT   - (Number) The PORT must be positive number: 2900.
+            %   AUTH   - (String) Cosmos Authorization
+            %   SCOPE  - (String) The Cosmos Scope defaults to 'DEFAULT'
 
             if ~ischar(SCHEMA) || ~ischar(HOST) || ~isnumeric(PORT)
                 error('incorrect input check SCHEMA, HOST, and PORT input');

@@ -35,7 +35,7 @@ classdef CosmosWebSocketClient < handle
             % CosmosWebSocketClient Constructor
             % Creates a java client to connect to the designated server.
             % Arguments: URI, [keyStore, storePassword, keyPassword], [httpHeaders]
-            % The URI must be of the form 'ws[s]://some.server.org:30000'.
+            % The URI must be of the form 'ws[s]://some.server.org:2900'.
             obj.URI = lower(URI);
             if strfind(obj.URI,'wss')
                 obj.Secure = true;
