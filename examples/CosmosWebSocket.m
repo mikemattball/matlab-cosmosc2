@@ -20,8 +20,7 @@ classdef CosmosWebSocket < CosmosWebSocketClient
 
         function onBinaryMessage(obj, bytearray)
             % This function simply displays the message received
-            fprintf('Binary message received:\n');
-            fprintf('Array length: %d\n',length(bytearray));
+            fprintf('Binary message received: %d\n',length(bytearray));
         end
 
         function onError(obj, message)
