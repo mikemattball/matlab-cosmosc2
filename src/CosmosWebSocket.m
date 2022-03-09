@@ -24,17 +24,27 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             if ~ischar(SCHEMA) || ~ischar(HOST) || ~isnumeric(PORT) || ~ischar(ENDPOINT)
                 error('incorrect input check SCHEMA, HOST, PORT, and ENDPOINT input');
             end
-            obj.AUTH = AUTH;
-            obj.SCOPE = SCOPE;
             URI = lower(strcat(SCHEMA,'://',HOST,':',int2str(PORT),ENDPOINT));
             obj@CosmosWebSocketClient(URI,varargin{:});
+            obj.AUTH = AUTH;
+            if ~exist('SCOPE','var') || ~ischar(SCOPE)
+                obj.SCOPE = 'DEFAULT';
+            else
+                obj.SCOPE = SCOPE;
+            end
         end     
+    end
 
-        function message = onTextMessage(obj, message)
+    methods (Access = protected)
+        function onOpen(obj,message)
+            % This function simply displays the message received
+            fprintf('%s\n',message);
+        end
+
+        function onTextMessage(obj, message)
             % This function simply displays the message received
             fprintf('Message received: %d\n',length(message));
-            struct message_struct = jsondecode(message);
-            message = message_struct;
+            message_struct = jsondecode(message);
         end
 
         function onBinaryMessage(obj, bytearray)

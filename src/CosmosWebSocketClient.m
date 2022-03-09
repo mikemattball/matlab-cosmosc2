@@ -80,19 +80,19 @@ classdef CosmosWebSocketClient < handle
             % Open the connection to the server
             % Create the java client object in with specified URI
             if obj.Status; warning('Connection is already open!');return; end
-            import io.github.BallAerospace.MatlabCosmos.*
+            import io.github.BallAerospace.Cosmos.*
             uri = handle(java.net.URI(obj.URI));
             headers = handle(java.util.HashMap());
             for i = 1:2:length(obj.HttpHeaders)-1
-                headers.put(obj.HttpHeaders{i}, obj.HttpHeaders{i+1});
+                headers.put(obj.HttpHeaders{i},obj.HttpHeaders{i+1});
             end
             if obj.Secure && ~obj.UseKeyStore
-                obj.ClientObj = handle(CosmosWebSocketSSLClient(uri, headers),'CallbackProperties');
+                obj.ClientObj = handle(JavaWebSocketSSLClient(uri,headers),'CallbackProperties');
             elseif obj.Secure && obj.UseKeyStore
-                obj.ClientObj = handle(CosmosWebSocketSSLClient(uri, headers,...
+                obj.ClientObj = handle(JavaWebSocketSSLClient(uri,headers,...
                     obj.KeyStore,obj.StorePassword,obj.KeyPassword),'CallbackProperties');
             else
-                obj.ClientObj = handle(CosmosCosmosWebSocketClient(uri, headers),'CallbackProperties');
+                obj.ClientObj = handle(JavaWebSocketClient(uri,headers),'CallbackProperties');
             end
             % Set callbacks
             set(obj.ClientObj,'OpenCallback',@obj.openCallback);

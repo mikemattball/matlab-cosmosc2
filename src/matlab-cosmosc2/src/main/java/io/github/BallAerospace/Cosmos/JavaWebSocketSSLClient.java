@@ -13,10 +13,10 @@ import javax.net.ssl.TrustManagerFactory;
 
 import org.java_websocket.WebSocketImpl;
 
-public class CosmosWebSocketSSLClient extends CosmosWebSocketClient {
+public class JavaWebSocketSSLClient extends JavaWebSocketClient {
     // The constructor creates a new SSL WebSocketServer with the wildcard IP,
     // accepting all connections on the specified port
-    public CosmosWebSocketSSLClient( URI serverURI, Map<String,String> httpHeaders, String keystore, String storePassword, String keyPassword ) throws Exception {
+    public JavaWebSocketSSLClient( URI serverURI, Map<String,String> httpHeaders, String keystore, String storePassword, String keyPassword ) throws Exception {
         super( serverURI, httpHeaders );
         String STORETYPE = "JKS";
         //WebSocketImpl.DEBUG = true;
@@ -39,7 +39,7 @@ public class CosmosWebSocketSSLClient extends CosmosWebSocketClient {
         this.setSocket( factory.createSocket() );
     }
 
-    public CosmosWebSocketSSLClient( URI serverURI, Map<String,String> httpHeaders ) throws Exception {
+    public JavaWebSocketSSLClient( URI serverURI, Map<String,String> httpHeaders ) throws Exception {
         super( serverURI, httpHeaders );
         //WebSocketImpl.DEBUG = true;
 
