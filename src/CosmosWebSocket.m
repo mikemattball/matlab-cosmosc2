@@ -5,6 +5,8 @@ classdef CosmosWebSocket < CosmosWebSocketClient
     properties (SetAccess = private)
         SCOPE % The Cosmos Scope
         AUTH % Cosmos Authorization
+        MODE % Used with processing data
+        DATA % Used to store data
     end
 
     methods
@@ -61,55 +63,113 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             obj@CosmosWebSocketClient(URI,varargin{:});
             obj.AUTH = AUTH;
             obj.SCOPE = SCOPE;
+            obj.MODE = 0;
+            obj.DATA = cell(1);
         end
 
-        function [tlm, tlm_names] = getData(obj,start,stop,item_defs,options)
+        function updateMode(obj)
             % -------------------------------------------------------------
-            % To get any time query items
+            % Reset MODE for client
             % -------------------------------------------------------------
             %
-            % [tlm, tlm_names] = db.getData(start, stop, ItemDefs, Options);
+            % obj.updateMode();
             %
             % Inputs:
             %
-            %    start - The start date for the data selection.  In format
-            %    'MM/DD/YYYY HH24:MI:SS:FF3'
-            %
-            %    stop- The end date for the data selection.  In the same
-            %    format as start.
-            %
-            %    item_defs - 1 by X cell array  (Comma separated) of the
-            %    target.packet.item you want.
-            %
-            %    options - Structure of all optional parameters
-            %
-            %       DataType - 'Converted' or 'Raw'.  Default is 'Converted'.
-            %       Use 'Raw' to see the data before conversions are
-            %       applied, as defined in the CMD/TLM server.
-            %
             % Outputs:
             %
-            %   tlm - array of cells that contains the resulting columns of
-            %   data.  The indexes of these correspond with the tlm_names
-            %   array.
+            % Examples:
+            % history_count = 100
+            if obj.MODE > 0
+                obj.MODE = obj.MODE * -1;
+                waitfor(obj,'MODE',0);
+            end
+            obj.close()
+            obj.MODE = 0;
+            obj.DATA = cell(1);
+        end
+
+        function [messages] = logMessages(obj,history_count)
+            % -------------------------------------------------------------
+            % Get log messages from Cosmos in real time.
+            % -------------------------------------------------------------
             %
-            %   tlm_names - array of the names of each column of data.
+            % [messages] = obj.logMessages(start, stop, ItemDefs, Options);
+            %
+            % Inputs:
+            %    history_count - Number of messages in the history
+            %
+            % Outputs:
+            %   messages - 
             %
             % Examples:
-            % item_defs = {'INST.ADCS.POSX','INST.ADCS.POSY'}
-            % start = '2/29/2022 00:00:00.000'
-            % stop = '2/31/2022 15:51:40.000'
+            % history_count = 100
 
-            startTime = datetime(start,'InputFormat','mm/dd/yyyy HH:MM:SS.FFF');
-            startEpoch = convertTo(startTime,'epochtime');
+            if obj.MODE ~= 0
+                error('Invlaid MODE for client.');
+            end
+            if ~isnumeric(history_count)
+                error('Invlaid history_count value must be numeric.');
+            end
+
+            messages = cell(1);
+
+            obj.MODE = 1;
+            sId = struct('channel','MessagesChannel','scope',obj.SCOPE,'token',obj.AUTH,'history_count',history_count);
+            sSubscribe = struct('command','subscribe','identifier',jsonencode(sId));
+            disp(jsonencode(sSubscribe));
+            % DEBUG obj.send(jsonencode(sSubscribe));
+
+            waitfor(obj,'MODE',-1);
+
+            messages = copy(obj.DATA);
+            obj.MODE = 0;
+            obj.DATA = cell(1);
+        end
+
+        function [tlm, tlm_names] = dataExtractor(obj,start,stop,item_defs,options)
+            % -------------------------------------------------------------
+            % Get data from cosmos.
+            % -------------------------------------------------------------
+            %
+            % [tlm, tlm_names] = obj.dataExtractor(start, stop, ItemDefs, Options);
+            %
+            % Inputs:
+            %    - start: The start date for the data selection.  In format 'dd/MM/yyyy HH:mm:SS:SS3'
+            %    - stop: The end date for the data selection.  In the same format as start.
+            %    - item_defs: 1 by X cell array  (Comma separated) of the target.packet.item you want.
+            %    + options: Structure of all optional parameters
+            %       - itemMode: 'Converted' or 'Raw'.  Default is 'Converted'.
+            %       Use 'Raw' to see the data before conversions are applied, as defined in the TLM definition.
+            %
+            % Outputs:
+            %   - tlm: array of cells that contains the resulting columns of
+            %   data.  The indexes of these correspond with the tlm_names
+            %   array.
+            %   - tlm_names: array of the names of each column of data.
+            %
+            % Examples:
+            %   item_defs = {'INST.ADCS.POSX','INST.ADCS.POSY'}
+            %   start = '29/2/2022 00:00:00.000'
+            %   stop = '31/2/2022 15:51:40.000'
+
+            if obj.MODE ~= 0
+                error('Invlaid MODE .');
+            end
+            if nargin < 5
+                options = struct('itemMode', 'Converted');
+            end
+
+            startTime = datetime(start,'InputFormat','dd/MM/yyyy HH:mm:ss.SSS');
+            startEpoch = convertTo(startTime,'posixtime');
             startValue = startEpoch * 1000000000;
 
-            stopTime = datetime(stop,'InputFormat','mm/dd/yyyy HH:MM:SS.FFF');
-            stopEpoch = convertTo(stopTime,'epochtime');
+            stopTime = datetime(stop,'InputFormat','dd/MM/yyyy HH:mm:ss.SSS');
+            stopEpoch = convertTo(stopTime,'posixtime');
             stopValue = stopEpoch * 1000000000;
 
-            tlm_names = zeros(1,length(item_defs));
-            tlm = zeros(0);
+            tlm_names = cell(1,length(item_defs));
+            tlm = cell(1);
 
             for i = 1 : numel(item_defs)
                 pieces = strsplit(item_defs{i},'.');
@@ -117,13 +177,30 @@ classdef CosmosWebSocket < CosmosWebSocketClient
                 packet = pieces{2};               
                 item = pieces{3};
                 arg = strcat(target,'__',packet,'__',item);
-                if strcmp(options.DataType, 'Raw')
+                if strcmp(options.itemMode, 'Raw')
                     arg = strcat(arg,'__','RAW');
                 else
                     arg = strcat(arg,'__','CONVERTED');
                 end
-                tlm_names(i) = arg;
+                tlm_names{i} = arg;
             end
+
+            obj.MODE = 2;
+            sId = struct('channel','StreamingChannel','scope',obj.SCOPE,'token',obj.AUTH);
+            sSubscribe = struct('command','subscribe','identifier',jsonencode(sId));
+            obj.send(jsonencode(sSubscribe));
+            sData = struct('scope',obj.SCOPE,'mode','DECOM','token',obj.AUTH,'items',tlm_names,'start_time',startValue,'end_time',stopValue,'action','add');
+            sCommand = struct('command','message','identifier',jsonencode(sId),'data',jsonencode(sData));
+            obj.send(jsonencode(sCommand));
+
+            waitfor(obj,'MODE',-2);
+
+            sUnsubscribe = struct('command','unsubscribe','identifier',jsonencode(sId));
+            obj.send(jsonencode(sSubscribe));
+
+            tlm = obj.DATA;
+            obj.MODE = 0;
+            obj.DATA = cell(1);
         end
     end
 
@@ -136,7 +213,20 @@ classdef CosmosWebSocket < CosmosWebSocketClient
         function onTextMessage(obj, message)
             % This function simply displays the message received
             fprintf('Message received: %d\n',length(message));
-            message_struct = jsondecode(message);
+            mStruct = jsondecode(message);
+            if isfield(mStruct, 'type') && isfield(mStruct, 'message')
+                messageMode = 0;
+            else
+                messageMode = obj.MODE;
+            end
+            switch messageMode
+            case 1
+                obj.onMessageLogMessage(mStruct);
+            case 2
+                obj.onMessageDataExtractor(mStruct);
+            otherwise
+                fprintf('Message received: %s\n', message);
+            end
         end
 
         function onBinaryMessage(obj, bytearray)
@@ -152,6 +242,32 @@ classdef CosmosWebSocket < CosmosWebSocketClient
         function onClose(obj, message)
             % This function simply displays the message received
             fprintf('%s\n',message);
+        end
+    end
+
+    methods (Access = private)
+        function onMessageLogMessage(obj,mStruct)
+            % -------------------------------------------------------------
+            % process log message
+            % -------------------------------------------------------------
+            %
+            % obj.dataExtractor(start, stop, ItemDefs, Options);
+            %
+            % Inputs:
+            %   - mStruct: (struct) message converted from json to struct
+            disp(mStruct);
+        end
+
+        function onMessageDataExtractor(obj,mStruct)
+            % -------------------------------------------------------------
+            % process data extractor
+            % -------------------------------------------------------------
+            %
+            % obj.dataExtractor(start, stop, ItemDefs, Options);
+            %
+            % Inputs:
+            %   - mStruct: (struct) message converted from json to struct
+            disp(mStruct);
         end
     end
 end
