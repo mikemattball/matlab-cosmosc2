@@ -25,17 +25,43 @@ classdef CosmosApiClient < handle
             %   AUTH   - (String) Cosmos Authorization
             %   SCOPE  - (String) The Cosmos Scope defaults to 'DEFAULT'
 
-            if ~ischar(SCHEMA) || ~ischar(HOST) || ~isnumeric(PORT)
-                error('incorrect input check SCHEMA, HOST, and PORT input');
+            if ~exist('SCHEMA','var')
+                SCHEMA = getenv('COSMOS_API_SCHEMA');
+                if isempty(SCHEMA)
+                    SCHEMA = 'http';
+                end
+            end
+            if ~exist('HOST','var')
+                HOST = getenv('COSMOS_API_HOSTNAME');
+                if isempty(HOST)
+                    HOST = 'localhost';
+                end
+            end
+            if ~exist('PORT','var')
+                PORT = getenv('COSMOS_API_PORT');
+                if ischar(PORT) && isempty(HOST)
+                    PORT = 2900;
+                end
+            end
+            if exist('PORT','var') && ischar(PORT)
+                PORT = str2num(PORT);
+            end
+            if ~exist('AUTH','var')
+                AUTH = getenv('COSMOS_API_PASSWORD');
+            end
+            if ~exist('SCOPE','var')
+                SCOPE = getenv('COSMOS_SCOPE');
+                if isempty(SCOPE)
+                    SCOPE = 'DEFAULT';
+                end
+            end
+            if isempty(SCHEMA) || isempty(HOST) || ~isnumeric(PORT) || isempty(AUTH) || isempty(SCOPE) 
+                error('Invalid arguments check input or environment.');
             end
             obj.AUTH = AUTH;
             obj.ID = 0;
+            obj.SCOPE = SCOPE;
             obj.URI = lower(strcat(SCHEMA,'://',HOST,':',int2str(PORT)));
-            if ~exist('SCOPE','var') || ~ischar(SCOPE)
-                obj.SCOPE = 'DEFAULT';
-            else
-                obj.SCOPE = SCOPE;
-            end
         end
 
         function response = json_rpc_post(obj,sBody)
@@ -94,11 +120,12 @@ classdef CosmosApiClient < handle
                 error('You can only send character arrays or byte arrays!');
             end
             if ~exist('qStruct','var')
-                query_params = matlab.net.QueryParameter()
+                uri = matlab.net.URI(strcat(obj.URI,endpoint));
             elseif ~isstruct(qStruct)
                 error('incorrect input qStruct must be a struct!');
             else
                 query_params = matlab.net.QueryParameter(qStruct)
+                uri = matlab.net.URI(strcat(obj.URI,endpoint),query_params);
             end
             applicationJson = matlab.net.http.MediaType('application/json');
             acceptField = matlab.net.http.field.AcceptField(applicationJson);
@@ -106,7 +133,6 @@ classdef CosmosApiClient < handle
             header = [acceptField authorizationField];
             method = matlab.net.http.RequestMethod.GET;
             consumer = matlab.net.http.io.JSONConsumer;
-            uri = matlab.net.URI(strcat(obj.URI,endpoint),query_params);
             request = matlab.net.http.RequestMessage(method,header);
             response = send(request,uri,[],consumer);
         end

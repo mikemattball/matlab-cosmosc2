@@ -135,10 +135,10 @@ classdef CosmosJsonRpcApi < CosmosApiClient
             % get_tlm_values
             % -------------------------------------------------------------
             %
-            % response = api.get_tlm_values({{'INST' 'ADCS' 'POSX'}});
+            % response = api.get_tlm_values({'INST__ADCS__POSX__CONVERTED'});
             %
             % Inputs:
-            %   items - (Array) tlm values array. {{'target' 'pakcet' 'item'}, ...}
+            %   items - (Array) tlm values array. {'INST__HEALTH_STATUS__TEMP1__CONVERTED' ...}
             %
             % Outputs:
             %   response - HTTP response message matlab.net.http.ResponseMessage
@@ -147,7 +147,7 @@ classdef CosmosJsonRpcApi < CosmosApiClient
             % {
             %   "jsonrpc": "2.0",
             %   "method": "get_tlm_values",
-            %   "params": [[target_name, packet_name, item_name], ...],
+            %   "params": ['TARGET__PACKET__ITEM__MODE', ...],
             %   "id": obj.ID,
             %   "keyword_params": {"scope": "DEFAULT"}
             % }

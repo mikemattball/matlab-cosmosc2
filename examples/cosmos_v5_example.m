@@ -1,10 +1,16 @@
 
 % TODO
+setenv('COSMOS_API_SCHEMA', 'http')
+setenv('COSMOS_API_HOST', 'localhost')
+setenv('COSMOS_API_PORT', '2900')
+setenv('COSMOS_API_PASSWORD', 'www')
 
-api = CosmosJsonApi('http','localhost',2900,'www');
+api = CosmosJsonApi();
 
-api.status();
+status = api.status();
 
-client = CosmosWebSocket('ws','localhost',2900,'/cosmos-api/cable','www');
+disp(status);
+
+client = CosmosWebSocket();
 
 client.close()
