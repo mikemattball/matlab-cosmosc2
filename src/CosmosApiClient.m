@@ -5,7 +5,7 @@ classdef CosmosApiClient < handle
     % https://www.mathworks.com/help/matlab/ref/matlab.net.uri-class.html
     % https://www.mathworks.com/help/matlab/ref/matlab.net.queryparameter-class.html
 
-    properties (SetAccess = private)
+    properties (Access = private)
         ID % The request ID
         URI % The URI of the server
         SCOPE % The Cosmos Scope

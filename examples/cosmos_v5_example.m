@@ -14,13 +14,13 @@ disp(status);
 
 client = CosmosWebSocket();
 
-item_defs = {'INST.ADCS.POSX','INST.ADCS.POSY'};
-start = '3/9/2022 14:00:00.000';
-stop = '3/9/2022 14:01:40.000';
+item_defs = {'INST.ADCS.POSX','INST.HEALTH_STATUS.TEMP1'};
+start = '2022/3/11 10:30:00.000';
+stop = '2022/3/11 10:35:00.000';
 
 [tlm, tlm_names] = client.dataExtractor(start, stop, item_defs);
 
-disp(tlm);
+disp(length(tlm));
 
 disp(tlm_names);
 

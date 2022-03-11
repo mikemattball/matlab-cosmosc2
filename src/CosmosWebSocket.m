@@ -1,12 +1,27 @@
 classdef CosmosWebSocket < CosmosWebSocketClient
     %CosmosWebSocket A wrapper for the CosmosWebSocketClient
     %   I have no idea what I am doing writting this.
+    %   MODES
+    %     0 - checkStatus
+    %     1 - connectionWelcome
+    %     2 - logMessages
+    %     3 - subscribeDataExtractor
+    %     4 - activeDataExtractor
+
+    properties
+        TimeZone % The TimeZone to convert
+    end
 
     properties (SetAccess = private)
+        MODE % Used with processing data
+    end
+
+    properties (Access = private)
         SCOPE % The Cosmos Scope
         AUTH % Cosmos Authorization
-        MODE % Used with processing data
         DATA % Used to store data
+        META % Used to store metadata
+        STOP_COUNT % Used to catch empty data
     end
 
     methods
@@ -61,32 +76,32 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             end
             URI = lower(strcat(SCHEMA,'://',HOST,':',int2str(PORT),ENDPOINT));
             obj@CosmosWebSocketClient(URI,varargin{:});
+            obj.TimeZone = 'local';
             obj.AUTH = AUTH;
             obj.SCOPE = SCOPE;
-            obj.MODE = 0;
-            obj.DATA = cell(1);
+            obj.MODE = 1;
+            obj.DATA = {};
+            obj.META = struct;
+            obj.STOP_COUNT = 0;
         end
 
-        function updateMode(obj)
+        function shutdown(obj)
             % -------------------------------------------------------------
             % Reset MODE for client
             % -------------------------------------------------------------
             %
-            % obj.updateMode();
+            % obj.shutdown();
             %
             % Inputs:
             %
             % Outputs:
             %
-            % Examples:
-            % history_count = 100
-            if obj.MODE > 0
-                obj.MODE = obj.MODE * -1;
-                waitfor(obj,'MODE',0);
-            end
+
             obj.close()
             obj.MODE = 0;
-            obj.DATA = cell(1);
+            obj.DATA = {};
+            obj.META = struct;
+            obj.STOP_COUNT = 0;
         end
 
         function [messages] = logMessages(obj,history_count)
@@ -105,26 +120,30 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             % Examples:
             % history_count = 100
 
-            if obj.MODE ~= 0
-                error('Invlaid MODE for client.');
+            if ~obj.Status
+                error('WebSocket is disconnected.');
             end
             if ~isnumeric(history_count)
                 error('Invlaid history_count value must be numeric.');
             end
 
-            messages = cell(1);
+            fprintf('Checking MODE %d\n',obj.MODE);
+            waitfor(obj,'MODE',1);
 
-            obj.MODE = 1;
+            messages = {};
+
+            obj.MODE = 2;
             sId = struct('channel','MessagesChannel','scope',obj.SCOPE,'token',obj.AUTH,'history_count',history_count);
             sSubscribe = struct('command','subscribe','identifier',jsonencode(sId));
             disp(jsonencode(sSubscribe));
             % DEBUG obj.send(jsonencode(sSubscribe));
 
-            waitfor(obj,'MODE',-1);
+            waitfor(obj,'MODE',-2);
 
-            messages = copy(obj.DATA);
-            obj.MODE = 0;
-            obj.DATA = cell(1);
+            messages = obj.DATA;
+            obj.MODE = 1;
+            obj.DATA = {};
+            obj.META = struct;
         end
 
         function [tlm, tlm_names] = dataExtractor(obj,start,stop,item_defs,options)
@@ -135,7 +154,7 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             % [tlm, tlm_names] = obj.dataExtractor(start, stop, ItemDefs, Options);
             %
             % Inputs:
-            %    - start: The start date for the data selection.  In format 'dd/MM/yyyy HH:mm:SS:SS3'
+            %    - start: The start date for the data selection.  In format 'yyyy/MM/dd HH:mm:SS:SS3'
             %    - stop: The end date for the data selection.  In the same format as start.
             %    - item_defs: 1 by X cell array  (Comma separated) of the target.packet.item you want.
             %    + options: Structure of all optional parameters
@@ -153,61 +172,70 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             %   start = '29/2/2022 00:00:00.000'
             %   stop = '31/2/2022 15:51:40.000'
 
-            if obj.MODE ~= 0
-                error('Invlaid MODE .');
+            if ~obj.Status
+                error('WebSocket is disconnected.');
             end
             if nargin < 5
                 options = struct('itemMode', 'Converted');
             end
 
-            startTime = datetime(start,'InputFormat','dd/MM/yyyy HH:mm:ss.SSS');
+            startTime = datetime(start,'InputFormat','yyyy/MM/dd HH:mm:ss.SSS','TimeZone',obj.TimeZone);
             startEpoch = convertTo(startTime,'posixtime');
             startValue = startEpoch * 1000000000;
 
-            stopTime = datetime(stop,'InputFormat','dd/MM/yyyy HH:mm:ss.SSS');
+            stopTime = datetime(stop,'InputFormat','yyyy/MM/dd HH:mm:ss.SSS','TimeZone',obj.TimeZone);
             stopEpoch = convertTo(stopTime,'posixtime');
             stopValue = stopEpoch * 1000000000;
 
-            tlm_names = cell(length(item_defs),1);
-            tlm = cell(1);
+            tlm_names = cell(1,length(item_defs));
+            tlm_items = cell(length(item_defs),1);
 
             for i = 1 : numel(item_defs)
                 pieces = strsplit(item_defs{i},'.');
                 target = pieces{1};
                 packet = pieces{2};               
                 item = pieces{3};
-                arg = strcat(target,'__',packet,'__',item);
+                arg = strcat('TLM__',target,'__',packet,'__',item);
                 if strcmp(options.itemMode, 'Raw')
                     arg = strcat(arg,'__','RAW');
                 else
                     arg = strcat(arg,'__','CONVERTED');
                 end
-                tlm_names{i} = arg;
+                tlm_items{i} = arg;
+                tlm_names{1,i} = item_defs{i};
+                obj.META.(arg) = struct('row',1,'col',i);
+                obj.STOP_COUNT = obj.STOP_COUNT + 1;
             end
 
-            obj.MODE = 2;
+            fprintf('Checking MODE %d\n',obj.MODE);
+            waitfor(obj,'MODE',1);
+
+            obj.MODE = 3;
             sId = struct('channel','StreamingChannel','scope',obj.SCOPE,'token',obj.AUTH);
             sSubscribe = struct('command','subscribe','identifier',jsonencode(sId));
             obj.send(jsonencode(sSubscribe));
 
-            waitfor(obj,'MODE',-2);
+            waitfor(obj,'MODE',-3);
 
             fprintf('Requesting %d items\n',length(tlm_names));
-            obj.MODE = 3;
-            sData = struct('scope',obj.SCOPE,'mode','DECOM','token',obj.AUTH,'start_time',startValue,'end_time',stopValue,'action','add');
-            sData.items = tlm_names;
+            obj.MODE = 4;
+            sData = struct('scope',obj.SCOPE,'mode','DECOM','token',obj.AUTH,'action','add');
+            sData.items = tlm_items;
+            sData.start_time = uint64(startValue);
+            sData.end_time = uint64(stopValue);
             sCommand = struct('command','message','identifier',jsonencode(sId),'data',jsonencode(sData));
             obj.send(jsonencode(sCommand));
 
             fprintf('Waiting on data...\n');
-            waitfor(obj,'MODE',-3);
+            waitfor(obj,'MODE',-4);
 
             sUnsubscribe = struct('command','unsubscribe','identifier',jsonencode(sId));
             obj.send(jsonencode(sSubscribe));
 
             tlm = obj.DATA;
-            obj.MODE = 0;
-            obj.DATA = cell(1);
+            obj.MODE = 1;
+            obj.DATA = {};
+            obj.META = struct;
         end
     end
 
@@ -219,21 +247,22 @@ classdef CosmosWebSocket < CosmosWebSocketClient
 
         function onTextMessage(obj, message)
             % This function simply displays the message received
-            fprintf('Message received: %d\n',length(message));
+            % fprintf('Message received: %d\n',length(message));
+            % fprintf('%s\n',message);
             messageMode = obj.MODE;
             mStruct = jsondecode(message);
             if isfield(mStruct, 'type') && isfield(mStruct, 'message')
                 messageMode = 0;
             end
             switch messageMode
-            case 1
-                obj.onMessageLogMessage(message,mStruct);
             case 2
-                obj.onSubscribeDataExtractor(message,mStruct);
+                obj.onMessageLogMessage(message,mStruct);
             case 3
+                obj.onSubscribeDataExtractor(message,mStruct);
+            case 4
                 obj.onMessageDataExtractor(message,mStruct);
             otherwise
-                fprintf('Message received: %s\n', message);
+                obj.onMessageOther(message,mStruct);
             end
         end
 
@@ -251,12 +280,50 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             % This function simply displays the message received
             fprintf('%s\n',message);
         end
-    end
+    end % methods
 
     methods (Access = private)
+        function dt = convertPosix64(obj,time)
+            % -------------------------------------------------------------
+            % convert 64bit time into datetime
+            % -------------------------------------------------------------
+            %
+            % obj.convertPosix64(time);
+            %
+            % Inputs:
+            %   - time: (int) posic time value 64bit ie: 1647019802041785856
+            %
+            % Outputs:
+            %   - dt: (datetime) Matlab datetime object
+
+            t_ne = uint64(time);
+            NS = 1e9;
+            right_over = mod(t_ne, NS);
+            left_over = t_ne - right_over;
+            dt = datetime( double(left_over)/NS, 'convertfrom', 'posixtime', 'Format', 'dd-MMM-uuuu HH:mm:ss.SSSSSSSSS') + seconds(double(right_over)/NS);
+        end
+
+        function onMessageOther(obj,message,mStruct)
+            % -------------------------------------------------------------
+            % process welcome message MODE 0
+            % -------------------------------------------------------------
+            %
+            % obj.onMessageOther(message,mStruct);
+            %
+            % Inputs:
+            %   - message: (string) json message
+            %   - mStruct: (struct) message converted from json to struct
+
+            if isfield(mStruct, 'type') && strcmp(mStruct.type,'welcome')
+                obj.MODE = 1;
+                % fprintf('Updated MODE: %d\n',obj.MODE);
+            end
+            fprintf('Message received: %s\n', message);
+        end
+
         function onMessageLogMessage(obj,message,mStruct)
             % -------------------------------------------------------------
-            % process log message
+            % process log message MODE 2
             % -------------------------------------------------------------
             %
             % obj.onMessageLogMessage(message,mStruct);
@@ -264,12 +331,13 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             % Inputs:
             %   - message: (string) json message
             %   - mStruct: (struct) message converted from json to struct
+
             disp(mStruct);
         end
 
         function onSubscribeDataExtractor(obj,message,mStruct)
             % -------------------------------------------------------------
-            % process data extractor subscribe message
+            % process data extractor subscribe message MODE 3
             % -------------------------------------------------------------
             %
             % obj.onSubscribeDataExtractor(message,mStruct);
@@ -277,15 +345,16 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             % Inputs:
             %   - message: (string) json message
             %   - mStruct: (struct) message converted from json to struct
+
             if isfield(mStruct, 'type') && strcmp(mStruct.type,'confirm_subscription')
-                obj.MODE = -2;
-                % fprintf('Update MODE: %d\n',obj.MODE);
+                obj.MODE = -3;
+                % fprintf('Updated MODE: %d\n',obj.MODE);
             end
         end
 
         function onMessageDataExtractor(obj,message,mStruct)
             % -------------------------------------------------------------
-            % process data extractor
+            % process data extractor MODE 4
             % -------------------------------------------------------------
             %
             % obj.onMessageDataExtractor(message,mStruct);
@@ -293,7 +362,28 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             % Inputs:
             %   - message: (string) json message
             %   - mStruct: (struct) message converted from json to struct
-            disp(mStruct.message);
+
+            sMessage = jsondecode(mStruct.message);
+            if isempty(sMessage)
+                obj.STOP_COUNT = obj.STOP_COUNT - 1;
+                if obj.STOP_COUNT == 0
+                    obj.MODE = -4;
+                    % fprintf('Updated MODE: %d COUNT: %d\n',obj.MODE,length(obj.DATA));
+                end
+                return
+            end
+            for i = 1 : numel(sMessage)
+                packet_info = sMessage(i);
+                dt = obj.convertPosix64(packet_info.time);
+                packet_info = rmfield(packet_info,'time');
+                values = fieldnames(packet_info);
+                for i=1: numel(values)
+                    rowIndex = obj.META.(values{i}).row;
+                    colIndex = obj.META.(values{i}).col;
+                    obj.DATA{rowIndex,colIndex} = struct('time',dt,'value',packet_info.(values{i}));
+                    obj.META.(values{i}).row = obj.META.(values{i}).row + 1;
+                end
+            end
         end
-    end
+    end % methods
 end
