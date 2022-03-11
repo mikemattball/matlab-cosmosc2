@@ -6,6 +6,20 @@ WebApi
 
 CosmosJsonApi and CosmosJsonRpcApi are both interfaces that make it easier to get data from Cosmos v5 to Matlab. 
 
+Example:
+
+```matlab
+setenv('COSMOS_API_SCHEMA', 'http')
+setenv('COSMOS_API_HOST', 'localhost')
+setenv('COSMOS_API_PORT', '2900')
+setenv('COSMOS_API_PASSWORD', 'password')
+
+api = CosmosJsonApi();
+
+status = api.status();
+
+disp(status);
+```
 
 WebSockets
 ---
@@ -64,25 +78,35 @@ Connecting to Cosmos v5 with the CosmosClient:
 
 ```matlab
 SCHEMA = 'wss';
-HOST = 'localhost';
+HOST = 'cosmos';
 PORT = 2900;
 ENDPOINT = '/cosmos-api/cable';
-client = CosmosWebSocket(SCHEMA,HOST,PORT,ENDPOINT);
+AUTH = 'password';
+client = CosmosWebSocket(SCHEMA,HOST,PORT,ENDPOINT,AUTH);
 ```
+
+or make sure you have your environment loaded with 
+
+```matlab
+setenv('COSMOS_WS_SCHEMA', 'wss')
+setenv('COSMOS_API_HOST', 'cosmos')
+setenv('COSMOS_API_PORT', '2900')
+setenv('COSMOS_API_PASSWORD', 'password')
+
+client = CosmosWebSocket();
+```
+
 
 
 SSL / WebSocket Secure (wss)
 ---
 
-To enable SSL, you must first have a certificate. A self-signed key store can be generated with the java `keytool`, but you should always use a valid certificate in production. From there, open the server by passing the location of the store, the store password, and the key password. With the EchoServer, for example:
+To enable SSL, you must first have a certificate. A self-signed key store can be generated with the java `keytool`, but you should always use a valid certificate in production. From there, open the server by passing the location of the store, the store password, and the key password. With the CosmosWebSocketClient, for example:
 
 The client can then connect to it:
 ```matlab
-SCHEMA = 'wss';
-HOST = 'localhost';
-PORT = 2900;
-ENDPOINT = '/cosmos-api/cable';
-c = CosmosWebSocket(SCHEMA,HOST,PORT,ENDPOINT,STORE,STOREPASSWORD,KEYPASSWORD);
+URI = 'wss://localhost:2900/cosmos-api/cable';
+c = CosmosWebSocketClient(URI,STORE,STOREPASSWORD,KEYPASSWORD);
 ```
 
 Building the Java JAR

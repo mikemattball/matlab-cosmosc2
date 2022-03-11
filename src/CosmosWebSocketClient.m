@@ -115,7 +115,7 @@ classdef CosmosWebSocketClient < handle
         
         function delete(obj)
             % Destructor
-            % Closes the websocket if it's open.
+            % Closes the websocket if it is open.
             if obj.Status
                 obj.close();
             end
@@ -127,6 +127,7 @@ classdef CosmosWebSocketClient < handle
             if ~ischar(message) && ~isa(message,'int8') && ~isa(message,'uint8')
                 error('You can only send character arrays or byte arrays!');
             end
+            % fprintf('sending message: %s\n',message);
             obj.ClientObj.send(message);
         end
     end

@@ -168,7 +168,7 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             stopEpoch = convertTo(stopTime,'posixtime');
             stopValue = stopEpoch * 1000000000;
 
-            tlm_names = cell(1,length(item_defs));
+            tlm_names = cell(length(item_defs),1);
             tlm = cell(1);
 
             for i = 1 : numel(item_defs)
@@ -189,11 +189,18 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             sId = struct('channel','StreamingChannel','scope',obj.SCOPE,'token',obj.AUTH);
             sSubscribe = struct('command','subscribe','identifier',jsonencode(sId));
             obj.send(jsonencode(sSubscribe));
-            sData = struct('scope',obj.SCOPE,'mode','DECOM','token',obj.AUTH,'items',tlm_names,'start_time',startValue,'end_time',stopValue,'action','add');
+
+            waitfor(obj,'MODE',-2);
+
+            fprintf('Requesting %d items\n',length(tlm_names));
+            obj.MODE = 3;
+            sData = struct('scope',obj.SCOPE,'mode','DECOM','token',obj.AUTH,'start_time',startValue,'end_time',stopValue,'action','add');
+            sData.items = tlm_names;
             sCommand = struct('command','message','identifier',jsonencode(sId),'data',jsonencode(sData));
             obj.send(jsonencode(sCommand));
 
-            waitfor(obj,'MODE',-2);
+            fprintf('Waiting on data...\n');
+            waitfor(obj,'MODE',-3);
 
             sUnsubscribe = struct('command','unsubscribe','identifier',jsonencode(sId));
             obj.send(jsonencode(sSubscribe));
@@ -213,17 +220,18 @@ classdef CosmosWebSocket < CosmosWebSocketClient
         function onTextMessage(obj, message)
             % This function simply displays the message received
             fprintf('Message received: %d\n',length(message));
+            messageMode = obj.MODE;
             mStruct = jsondecode(message);
             if isfield(mStruct, 'type') && isfield(mStruct, 'message')
                 messageMode = 0;
-            else
-                messageMode = obj.MODE;
             end
             switch messageMode
             case 1
-                obj.onMessageLogMessage(mStruct);
+                obj.onMessageLogMessage(message,mStruct);
             case 2
-                obj.onMessageDataExtractor(mStruct);
+                obj.onSubscribeDataExtractor(message,mStruct);
+            case 3
+                obj.onMessageDataExtractor(message,mStruct);
             otherwise
                 fprintf('Message received: %s\n', message);
             end
@@ -246,28 +254,46 @@ classdef CosmosWebSocket < CosmosWebSocketClient
     end
 
     methods (Access = private)
-        function onMessageLogMessage(obj,mStruct)
+        function onMessageLogMessage(obj,message,mStruct)
             % -------------------------------------------------------------
             % process log message
             % -------------------------------------------------------------
             %
-            % obj.dataExtractor(start, stop, ItemDefs, Options);
+            % obj.onMessageLogMessage(message,mStruct);
             %
             % Inputs:
+            %   - message: (string) json message
             %   - mStruct: (struct) message converted from json to struct
             disp(mStruct);
         end
 
-        function onMessageDataExtractor(obj,mStruct)
+        function onSubscribeDataExtractor(obj,message,mStruct)
+            % -------------------------------------------------------------
+            % process data extractor subscribe message
+            % -------------------------------------------------------------
+            %
+            % obj.onSubscribeDataExtractor(message,mStruct);
+            %
+            % Inputs:
+            %   - message: (string) json message
+            %   - mStruct: (struct) message converted from json to struct
+            if isfield(mStruct, 'type') && strcmp(mStruct.type,'confirm_subscription')
+                obj.MODE = -2;
+                % fprintf('Update MODE: %d\n',obj.MODE);
+            end
+        end
+
+        function onMessageDataExtractor(obj,message,mStruct)
             % -------------------------------------------------------------
             % process data extractor
             % -------------------------------------------------------------
             %
-            % obj.dataExtractor(start, stop, ItemDefs, Options);
+            % obj.onMessageDataExtractor(message,mStruct);
             %
             % Inputs:
+            %   - message: (string) json message
             %   - mStruct: (struct) message converted from json to struct
-            disp(mStruct);
+            disp(mStruct.message);
         end
     end
 end
