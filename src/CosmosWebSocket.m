@@ -21,7 +21,6 @@ classdef CosmosWebSocket < CosmosWebSocketClient
         AUTH % Cosmos Authorization
         DATA % Used to store data
         META % Used to store metadata
-        STOP_COUNT % Used to catch empty data
     end
 
     methods
@@ -82,7 +81,6 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             obj.MODE = 1;
             obj.DATA = {};
             obj.META = struct;
-            obj.STOP_COUNT = 0;
         end
 
         function shutdown(obj)
@@ -101,7 +99,6 @@ classdef CosmosWebSocket < CosmosWebSocketClient
             obj.MODE = 0;
             obj.DATA = {};
             obj.META = struct;
-            obj.STOP_COUNT = 0;
         end
 
         function [messages] = logMessages(obj,history_count)
@@ -204,7 +201,6 @@ classdef CosmosWebSocket < CosmosWebSocketClient
                 tlm_items{i} = arg;
                 tlm_names{1,i} = item_defs{i};
                 obj.META.(arg) = struct('row',1,'col',i);
-                obj.STOP_COUNT = obj.STOP_COUNT + 1;
             end
 
             fprintf('Checking MODE %d\n',obj.MODE);
@@ -365,11 +361,8 @@ classdef CosmosWebSocket < CosmosWebSocketClient
 
             sMessage = jsondecode(mStruct.message);
             if isempty(sMessage)
-                obj.STOP_COUNT = obj.STOP_COUNT - 1;
-                if obj.STOP_COUNT == 0
-                    obj.MODE = -4;
-                    % fprintf('Updated MODE: %d COUNT: %d\n',obj.MODE,length(obj.DATA));
-                end
+                obj.MODE = -4;
+                % fprintf('Updated MODE: %d COUNT: %d\n',obj.MODE,length(obj.DATA));
                 return
             end
             for i = 1 : numel(sMessage)

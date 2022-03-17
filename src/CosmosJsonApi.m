@@ -128,7 +128,7 @@ classdef CosmosJsonApi < CosmosApiClient
             if ~ischar(name)
                 error('name must be character arrays or byte arrays!');
             end 
-            resp = obj.get(strcat('/cosmos-api/metadata/',name));
+            resp = obj.get(strcat('/cosmos-api/metadata/_get/',name));
         end
 
         function resp = narrative(obj)
