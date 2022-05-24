@@ -28,6 +28,7 @@ classdef CosmosWebSocketClient < handle
         KeyStore % Location of the keystore
         StorePassword % Keystore password
         KeyPassword % Key password
+        opened = false % Used to handshake the shutdown
     end
     
     methods
@@ -102,13 +103,29 @@ classdef CosmosWebSocketClient < handle
             set(obj.ClientObj,'CloseCallback',@obj.closeCallback);
             % Connect to the websocket server
             obj.ClientObj.connectBlocking();
+            obj.opened = true;
         end
         
         function close(obj)
             % Close the websocket connection and explicitely delete the
             % java client object
             if ~obj.Status; warning('Connection is already closed!');return; end
+
             obj.ClientObj.closeBlocking()
+
+            % We have to wait until that close callback is complete!
+            start_time = clock;
+            while obj.opened && etime(clock, start_time) < 5.0
+                % Matlab must rest to do other things...
+                pause(0.01)
+            end
+            if obj.opened == true
+                error('Timeout shutting down CosmosWebSocketClient.')
+            end
+
+            % Just in case - call it shut down.
+            obj.opened = false;
+
             delete(obj.ClientObj);
             obj.ClientObj = [];
         end
@@ -166,10 +183,11 @@ classdef CosmosWebSocketClient < handle
         function closeCallback(obj,~,e)
             % Define behavior in an onClose method of a subclass
             obj.onClose(char(e.message));
+            obj.opened = false;
             % Delete java client object if needed
             if ~isvalid(obj); return; end
-            delete(obj.ClientObj);
-            obj.ClientObj = [];
+            %delete(obj.ClientObj);
+            %obj.ClientObj = [];
         end
     end
 end
